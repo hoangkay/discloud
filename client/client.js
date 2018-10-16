@@ -3,7 +3,7 @@ console.log("Hello");
 var form = document.querySelector("form");
 const API_URL = "http://localhost:5000/keys";
 
-form.addEventListener("submit", function(event) {
+form.addEventListener("submit", (event) => {
   event.preventDefault();
   var formData = new FormData(form);
   var id = formData.get("channelID");
@@ -20,5 +20,8 @@ form.addEventListener("submit", function(event) {
       "content-type": "application/json"
     },
     body: JSON.stringify(key)
-  })
+  }).then(response => response.json())
+    .then(createdJob => {
+      console.log(createdJob);
+    });
 });
