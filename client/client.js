@@ -1,7 +1,19 @@
-console.log("Hello");
-
-var form = document.querySelector("form");
 const API_URL = "http://localhost:5000/keys";
+const LOGIN_URL = "http://localhost:5000/login";
+
+var loginButton = document.querySelector("#login");
+var form = document.querySelector("form");
+
+console.log(loginButton);
+
+loginButton.addEventListener("click", () => {
+  fetch(LOGIN_URL)
+    .then(response => response.json())
+    .then(message => {
+      console.log(message);
+      window.location.replace(message.message);
+    });
+});
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
