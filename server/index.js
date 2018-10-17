@@ -1,16 +1,17 @@
 const express = require("express");
 const cors = require("cors");
 const monk = require("monk");
+const fetch = require("node-fetch");
+const btoa = require("btoa");
+require("dotenv").config();
 
 const app = express();
-
 const db = monk("localhost:27017/discloud");
 const jobs = db.get("jobs");
 
-// const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_ID = "501861885809917953";
+const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const redirect = encodeURIComponent("http://localhost:5000");
+const redirect = encodeURIComponent("http://localhost:5000/callback");
 
 app.use(cors());
 app.use(express.json());
@@ -22,14 +23,30 @@ app.get("/", (request, response) => {
 });
 
 app.get("/login", (request, response) => {
-  // response.header("Access-Control-Allow-Origin", "*");
-  // response.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
-  // var url = "https://discordapp.com/oauth2/authorize?client_id=$" + CLIENT_ID + "&scope=identify&response_type=code&redirect_uri=$" + redirect;
-  // console.log(url);
   response.json({
     message: "https://discordapp.com/oauth2/authorize?client_id=" + CLIENT_ID + "&redirect_uri=" + redirect + "&response_type=code&scope=messages.read%20identify%20guilds"
   });
-  // response.redirect("https://discordapp.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=identify&response_type=code&redirect_uri=${redirect}");
+});
+
+app.get("/callback", (request, response) => {
+  if (!request.query.code) throw new Error("NoCodeProvided");
+  const code = request.query.code;
+  const redirect_uri = "http://127.0.0.1:8080";
+  const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
+  fetch(`https://discordapp.com/api/oauth2/token?grant_type=client_credentials&code=${code}&redirect_uri=${redirect_uri}&scope=identify%20guilds%20messages.read`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Authorization": `Basic ${creds}`,
+    },
+  }).then(response => response.json())
+    .then(createdJob => {
+      console.log(createdJob);
+    });
+
+  response.json({
+    message: code
+  });
 });
 
 function isValidKey(key) {
