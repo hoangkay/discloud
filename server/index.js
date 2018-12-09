@@ -7,11 +7,19 @@ require("dotenv").config();
 
 const app = express();
 const db = monk("localhost:27017/discloud");
+db.options = {
+  castIds: false
+}
 const jobs = db.get("jobs");
+const users = db.get("users");
+users.options = {
+  castIds: false
+}
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const redirect = encodeURIComponent("http://localhost:5000/callback");
+const BASE_URL = "https://discordapp.com/api";
 
 app.use(cors());
 app.use(express.json());
@@ -39,11 +47,32 @@ app.get("/callback", (request, response) => {
       "Content-Type": "application/x-www-form-urlencoded",
       "Authorization": `Basic ${creds}`,
     },
-  }).then(ATResponse => ATResponse.json())
-    .then(body => {
-      // Insert into db
-      console.log(body);
+  }).then(response => response.json())
+  .then(ATResponse => {
+    fetch(`${BASE_URL}/users/@me`, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${ATResponse.access_token}`,
+      },
+    }).then(response => response.json())
+    .then(userResponse => {
+      user = {
+        _id: userResponse.id,
+        username: userResponse.username,
+        access_token: ATResponse.access_token,
+      }
+      console.log(user);
+      // Insert into db if does not already exist
+      users.findOne({_id: user._id})
+      .then(doc => {
+        if (doc !== null) {
+          console.log("ID already exists: " + doc._id);
+        } else {
+          users.insert(user).then(() => console.log("Added user to db"));
+        }        
+      });
     });
+  });
 
     response.redirect('http://127.0.0.1:8080');
 });
