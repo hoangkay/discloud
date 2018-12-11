@@ -49,33 +49,53 @@ app.get("/callback", (request, response) => {
     },
   }).then(response => response.json())
   .then(ATResponse => {
-    fetch(`${BASE_URL}/users/@me`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${ATResponse.access_token}`,
-      },
-    }).then(response => response.json())
+    getData("/users/@me", ATResponse.access_token)
     .then(userResponse => {
-      user = {
-        _id: userResponse.id,
-        username: userResponse.username,
-        access_token: ATResponse.access_token,
-      }
-      console.log(user);
-      // Insert into db if does not already exist
-      users.findOne({_id: user._id})
-      .then(doc => {
-        if (doc !== null) {
-          console.log("ID already exists: " + doc._id);
-        } else {
-          users.insert(user).then(() => console.log("Added user to db"));
-        }        
+      getData("/users/@me/guilds", ATResponse.access_token)
+      .then(guildsResponse => {
+        const user = {
+          _id: userResponse.id,
+          username: userResponse.username,
+          access_token: ATResponse.access_token,
+          guilds: [],
+          created: new Date(),
+        }
+        guildsResponse.forEach(guild => {
+          delete guild["owner"];
+          delete guild["permissions"];
+          delete guild["icon"];
+
+          getData(`/guilds/${guild.id}/channels`, ATResponse.access_token)
+          .then()
+          
+          user.guilds.push(guild);
+        });
+        console.log(user);
+        // Insert into db if does not already exist
+        users.findOne({_id: user._id})
+        .then(doc => {
+          if (doc !== null) {
+            console.log("ID already exists: " + doc._id);
+          } else {
+            users.insert(user).then(() => console.log("Added user to db"));
+          }        
+        });
       });
     });
   });
 
     response.redirect('http://127.0.0.1:8080');
 });
+
+function getData(url, access_token) {
+  return fetch(BASE_URL + url, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${access_token}`,
+      "User-Agent": "Discloud"
+    }
+  }).then(response => response.json());
+}
 
 function isValidKey(key) {
   return key.id.toString() !== "" && /^\d+$/.test(key.id.toString());
